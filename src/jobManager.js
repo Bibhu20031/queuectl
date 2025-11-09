@@ -10,13 +10,22 @@ const POLL_MS = 800;
 async function enqueue(payload) {
   if (!payload || !payload.command) throw new Error('payload.command required');
   const jobs = loadJobs();
+
+  // ✅ Check for duplicate job ID
+  if (payload.id) {
+    const exists = jobs.find(j => j.id === payload.id);
+    if (exists) throw new Error(`Job with id "${payload.id}" already exists`);
+  }
+
   const id = payload.id || randomId('job');
   const job = {
     id,
     command: payload.command,
     state: 'pending',
     attempts: 0,
-    max_retries: Number.isInteger(payload.max_retries) ? payload.max_retries : DEFAULT_MAX_RETRIES,
+    max_retries: Number.isInteger(payload.max_retries)
+      ? payload.max_retries
+      : DEFAULT_MAX_RETRIES,
     created_at: nowISO(),
     updated_at: nowISO(),
     next_run_at: null,
@@ -27,6 +36,7 @@ async function enqueue(payload) {
   saveJobs(jobs);
   return id;
 }
+
 
 async function listJobs(state) {
   const jobs = loadJobs();
@@ -81,16 +91,27 @@ function claimJob() {
 // Execute a command via shell
 function execCommand(command, timeoutMs = 1000 * 60 * 5) {
   return new Promise((resolve) => {
-    const child = exec(command, { shell: '/bin/sh', timeout: timeoutMs }, (error, stdout, stderr) => {
+    const preferredShell = process.env.SHELL || (process.platform === 'win32' ? 'bash' : '/bin/sh');
+
+    console.log(`[execCommand] command="${command}" shell="${preferredShell}"`);
+
+    const child = exec(command, { shell: preferredShell, timeout: timeoutMs }, (error, stdout, stderr) => {
       const out = (stdout || '') + (stderr || '');
-      if (error) resolve({ success: false, error: error.message || out.trim(), output: out });
-      else resolve({ success: true, output: out });
+      if (stdout && stdout.toString().trim()) console.log(`[exec stdout] ${stdout.toString().trim()}`);
+      if (stderr && stderr.toString().trim()) console.log(`[exec stderr] ${stderr.toString().trim()}`);
+      if (error) {
+        console.log(`[exec error] ${error.message}`);
+        resolve({ success: false, error: error.message || out.trim(), output: out });
+      } else {
+        resolve({ success: true, output: out });
+      }
     });
-    
+
     if (child.stdout) child.stdout.on('data', d => process.stdout.write(d));
     if (child.stderr) child.stderr.on('data', d => process.stderr.write(d));
   });
 }
+
 
 async function processJob(job, backoffBase) {
   // run command
@@ -172,9 +193,7 @@ async function workerLoop(id, { base = 2 } = {}) {
   console.log(`worker ${id} exiting`);
 }
 
-function sleep(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
+
 
 
 async function runWorkers({ workers = 1, base = 2 } = {}) {
