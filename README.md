@@ -36,39 +36,39 @@ It is not a full production system but it shows how a job queue basically works.
 2. Open the project folder in VS Code or any terminal.
 
 3. Run these commands once:
-   ```bash
-   npm init -y
+   ```
+   npm init -y```
 
 
 To run commands, use:
 
-```node index.js <command> [options]
+```node index.js <command> [options]```
 
 Or if you are using the VS Code terminal, you can directly use:
 
-```queuectl <command> [options]
+```queuectl <command> [options]```
 
 Example Commands
 Enqueue a job
-```node index.js enqueue '{"id":"job1","command":"echo hello && sleep 2","max_retries":3}'
+```node index.js enqueue '{"id":"job1","command":"echo hello && sleep 2","max_retries":3}'```
 
 Run workers
-```node index.js run --workers 2 --base 2
+```node index.js run --workers 2 --base 2```
 
 View all jobs
-```node index.js list
+```node index.js list```
 
 Check job status summary
-```node index.js status
+```node index.js status```
 
 View jobs in DLQ
-```node index.js dlq list
+```node index.js dlq list```
 
 Retry a DLQ job
-```node index.js dlq retry job1
+```node index.js dlq retry job1```
 
 Stop workers gracefully
-```node index.js run stop
+```node index.js run stop```
 
 Here is the link for the app demo:
 https://drive.google.com/file/d/1VmcZvBbhUfINJ3jaVRw68B4h9Z-ntB0a/view?usp=sharing
